@@ -1,7 +1,7 @@
 ## .net 6 web API
 
-- this tutorial uses visual studio 2022 + .net 6 + SQL server 2019 + 
-
+Topics to be covered:
+- this tutorial uses visual studio 2022 + .net 6 + SQL server 2019 
 - understand principles of REST
 - create and understand a new .net web api project
 - learn and use entity framework to talk to SQL server 
@@ -17,4 +17,9 @@
 
 sql server 2019 connection string: Server=localhost\MSSQLSERVER01;Database=master;Trusted_Connection=True;
 
-Contents - 
+Contents 
+- [Creating a new web api](#creating-a-new-web-api)
+
+---
+
+### Creating a new web api
