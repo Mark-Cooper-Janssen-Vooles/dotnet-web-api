@@ -23,3 +23,17 @@ Contents
 ---
 
 ### Creating a new web api
+
+#### Create a new web api 
+- open visual studio
+- click create a new project 
+- select 'asp.net core web api'
+- puts project name as 'NZWalks.API' and solution name as 'NZWalks'
+- change location to where you have started the repo
+- for framework, check .net 6
+- click create
+
+
+---
+
+add this thing to the backend doc 
