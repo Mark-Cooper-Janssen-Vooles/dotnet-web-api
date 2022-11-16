@@ -418,5 +418,190 @@ public IActionResult GetAllRegions()
 ---
 
 ### Creating CRUD on Region Controller
+Both in the repository and the controller
+
+#### Creating Repository Methods 
+
+GET by Region ID
+- in IRegionRepository.cs add `Task<Region> GetAsync(Guid id);`
+- in RegionRepository.cs add
+````c#
+        public async Task<Region> GetAsync(Guid id)
+        {
+            return await dbContext.Regions.FirstOrDefaultAsync(x => x.Id == id);
+        }
+````
+- in RegionsController.cs 
+````c#
+[HttpGet]
+[Route("{id:guid}")] // this makes it so in the route we're looking for /id . It also specifies that it has to be of type guid
+public async Task<IActionResult> GetRegionAsync(Guid id)
+{
+    var region = await regionRepository.GetAsync(id);
+    if (region == null)
+    {
+        return NotFound();
+    }
+    var regionDTO = mapper.Map<Models.DTO.Region>(region);
+
+    return Ok(regionDTO);
+}
+````
+
+
+POST AddRegion
+- in IRegionRepository add `Task<Region> AddAsync(Region region);`
+- in RegionRepository add 
+````c#
+public async Task<Region> AddAsync(Region region)
+{
+    region.Id = Guid.NewGuid();
+    await dbContext.AddAsync(region);
+    await dbContext.SaveChangesAsync();
+    return region;
+}
+````
+- in RegionsController.cs add
+````c#
+[HttpPost]
+[ActionName("AddRegionAsync")]
+public async Task<IActionResult> AddRegionAsync(Models.DTO.AddRegionRequest addRegionRequest)
+{
+    // Request(DTO) to domain model
+    // var region = mapper.Map<Models.Domain.Region>(addRegionRequest);
+    var region = new Models.Domain.Region()
+    {
+        Code = addRegionRequest.Code,
+        Area = addRegionRequest.Area,
+        Lat = addRegionRequest.Lat,
+        Long = addRegionRequest.Long,
+        Name = addRegionRequest.Name,
+        Population = addRegionRequest.Population,
+    };
+
+    // pass details to repository
+    region = await regionRepository.AddAsync(region);
+
+    // convert back to DTO
+    // var regionDTO = mapper.Map<Models.DTO.Region>(region);
+    var regionDTO = new Models.DTO.Region
+    {
+        Id = region.Id,
+        Code = region.Code,
+        Area = region.Area,
+        Lat = region.Lat,
+        Long = region.Long,
+        Name = region.Name,
+        Population = region.Population,
+    };
+
+    return CreatedAtAction(nameof(AddRegionAsync), new { id = regionDTO.Id }, regionDTO);
+}
+````
+  - we don't want to use Models.DTO.Region as the argument type because that will expose the ID field, and we want to set that in the API
+  - so we create a new contract in Models => DTO => add new class 'AddRegionRequest.cs'
+  - steps:
+    - convert request(DTO) to domain model
+    - pass details to Repository
+    - convert back to DTO => we don't pass domain model, we pass DTO back to user
+
+DELETE delete region
+- iregionRepository `        Task<Region> DeleteAsync(Guid id);`
+- RegionRepository ctrl + . over class name
+````c#
+public async Task<Region> DeleteAsync(Guid id)
+{
+    var region = await GetAsync(id);
+    if (region == null)
+    {
+        return null;
+    }
+
+    // Delete the region
+    dbContext.Regions.Remove(region);
+    await dbContext.SaveChangesAsync();
+
+    return region;
+}
+````
+- in RegionsController
+````c#
+[HttpDelete]
+[Route("{id:guid}")]
+public async Task<IActionResult> DeleteRegionAsync(Guid id)
+{
+    var region = await regionRepository.DeleteAsync(id);
+    if (region == null)
+    {
+        return NotFound();
+    }
+
+    var regionDTO = mapper.Map<Models.DTO.Region>(region);
+
+    return Ok(regionDTO);
+}
+````
+
+PUT updateRegion
+- in IRegionRepository `        Task<Region> UpdateAsync(Guid id, Region updatedRegion);`
+- in RegionRepository 
+````c#
+public async Task<Region> UpdateAsync(Guid id, Region updatedRegion)
+{
+    var existingRegion = await GetAsync(id);
+    if (existingRegion == null)
+    {
+        return null;
+    }
+
+    existingRegion.Code = updatedRegion.Code;
+    existingRegion.Name = updatedRegion.Name;
+    existingRegion.Area = updatedRegion.Area;
+    existingRegion.Lat = updatedRegion.Lat;
+    existingRegion.Long = updatedRegion.Long;
+    existingRegion.Population = updatedRegion.Population;
+    await dbContext.SaveChangesAsync();
+
+    return existingRegion;
+}
+````
+- in RegionsController
+````c#
+[HttpPut]
+[Route("{id:guid}")]
+public async Task<IActionResult> UpdateRegionAsync(
+  [FromRoute] Guid id,  // we decorate this with 'fromRoute' so its obvious that its coming from the route 
+  [FromBody] Models.DTO.UpdateRegionRequest updatedRegion // and so its obvious its coming from the body
+  )
+{
+    // Convert the DTO to domain model
+    var region = new Models.Domain.Region()
+    {
+        Code = updatedRegion.Code,
+        Area = updatedRegion.Area,
+        Lat = updatedRegion.Lat,
+        Long = updatedRegion.Long,
+        Name = updatedRegion.Name,
+        Population = updatedRegion.Population,
+    };
+
+    // Update Region using repository 
+    var response = await regionRepository.UpdateAsync(id, region);
+
+    // if null, then NotFound
+    if (response == null)
+    {
+        return NotFound();
+    }
+
+    // if successful, convert domain back to DTO 
+    var regionDTO = mapper.Map<Models.DTO.Region>(region);
+
+    // return OK response
+    return Ok(regionDTO);
+}
+````
+
+---
 
 add this thing to the backend doc 
