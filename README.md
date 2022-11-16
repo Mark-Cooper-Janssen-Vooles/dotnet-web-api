@@ -29,6 +29,12 @@ Contents
   - [Running EF Core Migrations](#running-ef-core-migrations)
   - [Seeding Data into database](#seeding-data-into-database)
 - [Create new controller - Regions Controller](#create-new-controller---regions-controller)
+  - [Understanding the repository pattern](#understanding-the-repository-pattern)
+  - [Adding DTOs or Contracts](#adding-dtos-or-contracts)
+  - [Making our controller asynchronous](#making-our-code-asynchronous)
+- [Creating CRUD on region controller](#creating-crud-on-region-controller)
+
+
 
 
 sql server 2019 connection string: Server=localhost\MSSQLSERVER01;Database=master;Trusted_Connection=True;
@@ -410,5 +416,7 @@ public IActionResult GetAllRegions()
   ````
 
 ---
+
+### Creating CRUD on Region Controller
 
 add this thing to the backend doc 
