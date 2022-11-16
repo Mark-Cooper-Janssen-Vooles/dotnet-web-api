@@ -33,6 +33,10 @@ Contents
   - [Adding DTOs or Contracts](#adding-dtos-or-contracts)
   - [Making our controller asynchronous](#making-our-code-asynchronous)
 - [Creating CRUD on region controller](#creating-crud-on-region-controller)
+- [Creating Walks Controller and Implementing CRUD](#creating-walks-controller-and-implementing-crud)
+  - [Navigation Properties](#navigation-properties)
+- [Creating WalkDifficulty Controller and CRUD](#creating-walkdifficulty-controller-and-crud)
+
 
 
 
@@ -601,6 +605,60 @@ public async Task<IActionResult> UpdateRegionAsync(
     return Ok(regionDTO);
 }
 ````
+
+---
+
+### Creating Walks Controller and Implementing CRUD
+
+try to DIY this: 
+- create controller
+- create IWalksRepository
+- create WalksRepository
+- implement CRUD on controller
+- do one at a time 
+- same apis:
+  - GetAllWalksAsync
+  - GetWalkAsync
+  - AddWalkAsync
+  - DeleteWalkAsync
+  - UpdateWalkAsync
+
+#### Navigation Properties
+- In models.dto.walks:
+````c#
+    public class Walk
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public double Length { get; set; }
+        public Guid RegionId { get; set; }
+        public Guid WalkDifficultyId { get; set; }
+
+        // Navigation Property
+        public Region Region { get; set; }
+        public WalkDifficulty WalkDifficulty { get; set; }
+    }
+````
+- we need to tell entity framework to be able to fetch Region and WalkDifficulty (else they will be null)
+  - navigation properties in entity framework provides a way to navigate an association between two entity types
+  - Every object can have a navigation property for every relationship in which it participates 
+-  in our case a walk can only have one region, and one walkDifficulty.
+- In WalksRepository.cs:
+````c#
+public async Task<IEnumerable<Walk>> GetAllAsync()
+{
+    return await dbContext.Walks
+        .Include(x => x.Region)
+        .Include(x => x.WalkDifficulty)
+        .ToListAsync();
+}
+````
+- Now checking in swagger, our GetAllAsync (which is called in walksController 'GetAllWalksAsync') returns the Region and the WalkDifficulty as well. Great success
+
+
+---
+
+### Creating WalkDifficulty Controller and CRUD
 
 ---
 
