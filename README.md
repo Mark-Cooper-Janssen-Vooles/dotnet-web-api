@@ -16,6 +16,7 @@ Topics to be covered:
 
 
 Contents 
+- [Quick Notes](#quick-notes)
 - [Creating a new web api](#creating-a-new-web-api)
   - [Create new web api](#create-a-new-web-api)
   - [Understanding our new web api](#understanding-our-new-web-api)
@@ -42,6 +43,44 @@ Contents
 
 
 sql server 2019 connection string: Server=localhost\MSSQLSERVER01;Database=master;Trusted_Connection=True;
+
+---
+
+### Quick Notes
+#### Flow of creating API
+1. Create project
+2. Understand domain then create domain models (in models/domain file)
+3. Install Entity framework core nuget packages => SqlServer + Tools (database mapper for .net, supports linq queries)
+4. Create dbContext (in data file)
+5. create connection to DB
+6. in program.cs, add the dbContext dependency (so you can inject it)
+7. Run EF Core migration commands
+8. Optional: seed db
+9. Start creating CRUD controllers
+
+#### Flow of adding controllers 
+looks something like this:
+1. create controller, i.e. WalkDifficultyController.cs 
+2. Add in the method you want to use, i.e. GetAllAsync with code that might not exist yet, i.e.
+````c#
+[HttpGet]
+public async Task<IActionResult> GetAllAsync()
+{
+    var walkDifficulties = await walkDifficultyRepository.GetAllAsync();
+    var walkDifficultiesDto = mapper.Map<List<Models.DTO.WalkDifficulty>>(walkDifficulties);
+
+    return Ok(walkDifficultiesDto);
+}
+````
+3. Add in any dependency injection to the controllers constructor, i.e. the mapper and the repository (Repository pattern)
+4. Fix up the pseudo code written in 2 that doesn't exist yet, i.e. create the repository 
+  - create IWalkDifficultyRepository
+    - add actions as you go, i.e. for above we need `Task<IEnumerable<WalkDifficulty>> GetAllAsync();`
+    - in program.cs, add the scoped dependency: `builder.Services.AddScoped<IWalkDifficultyRepository, WalkDifficultyRepository>();`
+  - create WalkDifficultyRepository, inherit from IWalkDifficultyRepository, implement missing members
+    - dependency inject the db connection
+    - create / fill in the GetAllAsync method
+5. Repeat this for all CRUD actions
 
 ---
 
@@ -134,7 +173,7 @@ public class MyDependency
   }
 }
 
-public clas IndexModel : PageModel 
+public class IndexModel : PageModel 
 {
   private readonly MyDependency _dependency = new MyDependency(); // here the dependency is created
 
@@ -659,6 +698,41 @@ public async Task<IEnumerable<Walk>> GetAllAsync()
 ---
 
 ### Creating WalkDifficulty Controller and CRUD
+
+#### Flow of adding controllers 
+looks something like this:
+1. create controller, i.e. WalkDifficultyController.cs 
+2. Add in the method you want to use, i.e. GetAllAsync with code that might not exist yet, i.e.
+````c#
+[HttpGet]
+public async Task<IActionResult> GetAllAsync()
+{
+    var walkDifficulties = await walkDifficultyRepository.GetAllAsync();
+    var walkDifficultiesDto = mapper.Map<List<Models.DTO.WalkDifficulty>>(walkDifficulties);
+
+    return Ok(walkDifficultiesDto);
+}
+````
+3. Add in any dependency injection to the controllers constructor, i.e. the mapper and the repository (Repository pattern)
+4. Fix up the pseudo code written in 2 that doesn't exist yet, i.e. create the repository 
+  - create IWalkDifficultyRepository
+    - add actions as you go, i.e. for above we need `Task<IEnumerable<WalkDifficulty>> GetAllAsync();`
+    - in program.cs, add the scoped dependency: `builder.Services.AddScoped<IWalkDifficultyRepository, WalkDifficultyRepository>();`
+  - create WalkDifficultyRepository, inherit from IWalkDifficultyRepository, implement missing members
+    - dependency inject the db connection
+    - create / fill in the GetAllAsync method
+5. Repeat this for all CRUD actions
+  - GetAllAsync (/)
+  - GetAsync (/)
+    - involves setting the decorator `[Route("{id:guid}")]` and getting it [FromRoute]
+  - CreateAsync (/)
+    - involves getting it [FromBody] and creating a DTO for `AddWalkDifficultyRequest`
+  - UpdateAsync (/)
+    - involves getting id fromRoute and `UpdateDifficultyRequest` fromBody
+  - DeleteAsync
+    - 
+
+
 
 ---
 
