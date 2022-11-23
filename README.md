@@ -37,6 +37,8 @@ Contents
 - [Creating Walks Controller and Implementing CRUD](#creating-walks-controller-and-implementing-crud)
   - [Navigation Properties](#navigation-properties)
 - [Creating WalkDifficulty Controller and CRUD](#creating-walkdifficulty-controller-and-crud)
+- [Validations in .NET Core Web API](#validations-in-aspnet-core-web-api)
+
 
 
 
@@ -73,6 +75,7 @@ public async Task<IActionResult> GetAllAsync()
 }
 ````
 3. Add in any dependency injection to the controllers constructor, i.e. the mapper and the repository (Repository pattern)
+  - in models/Profiles folder, create mapper i.e. `CreateMap<Domain.WalkDifficulty, DTO.WalkDifficulty>().ReverseMap();`
 4. Fix up the pseudo code written in 2 that doesn't exist yet, i.e. create the repository 
   - create IWalkDifficultyRepository
     - add actions as you go, i.e. for above we need `Task<IEnumerable<WalkDifficulty>> GetAllAsync();`
@@ -729,8 +732,12 @@ public async Task<IActionResult> GetAllAsync()
     - involves getting it [FromBody] and creating a DTO for `AddWalkDifficultyRequest`
   - UpdateAsync (/)
     - involves getting id fromRoute and `UpdateDifficultyRequest` fromBody
-  - DeleteAsync
-    - 
+  - DeleteAsync (/)
+    - involves setting the decorator `[Route("{id:guid}")]` and getting it [FromRoute]
+
+---
+
+### Validations in ASP.NET Core Web API
 
 
 
