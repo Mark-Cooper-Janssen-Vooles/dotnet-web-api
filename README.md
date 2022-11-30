@@ -739,6 +739,108 @@ public async Task<IActionResult> GetAllAsync()
 
 ### Validations in ASP.NET Core Web API
 
+- clients can now consume our API to get this info
+- we need to be cautious about what data they are sending to our API, thats where validations come into play 
+  - we need to validate the data is correct and in the correct format 
+  - we do this using 400 "bad request" status code. server cannot or will not process the request due to something that is percieved to be a client error. 
+  - we need to do this so data base doesn't get junk data, and API doesn't throw random exceptions 
+
+- What endpoints do we need to validate? 
+  - we aren't passing any data to the `getAllRegionsAsync` data, so don't need to worry about this endpoint
+  - `GetRegionAsync` is being passed a Guid. 
+    - We are already protecting this using the guid validator we have in the route 
+    - if we don't find anything in the DB, we are returning a not found 404. 
+    - this endpoint doesnt need validations
+  - `AddRegionAsync` takes an addRegionRequest argument, so we need to validate it
+  - `DeleteRegionAsync` has a decorator validating that the argument is a guid already, no need to validate
+  - `UpdateRegionAsync` takes an updateRegionRequest, so we need to validate it 
+
+#### Validating Region Controller - AddRegionRequest Model 
+
+- AddRegionAsync is taking an AddRegionRequest argument 
+  - we expect the client to give the properties as expected in AddRegionRequest 
+````c#
+[HttpPost]
+[ActionName("AddRegionAsync")]
+public async Task<IActionResult> AddRegionAsync(Models.DTO.AddRegionRequest addRegionRequest)
+{
+    // validate the request (addRegionRequest) (we're adding this)
+    if (!ValidateAddRegionAsync(addRegionRequest))
+    {
+        return BadRequest(ModelState); // sends the modelState errors, can see in Swagger
+    }
+
+    // Request(DTO) to domain model
+    // pass details to repository
+    // convert back to DTO
+
+    return CreatedAtAction(nameof(AddRegionAsync), new { id = regionDTO.Id }, regionDTO);
+}
+
+// now in our same API class, add a private methods region and the validator: 
+#region Private methods
+private bool ValidateAddRegionAsync(Models.DTO.AddRegionRequest addRegionRequest)
+{
+    if (addRegionRequest == null)
+    {
+        ModelState.AddModelError(nameof(addRegionRequest),
+            "Add Region Data is requiredcannot be null or empty or white space.");
+
+        return false;
+    }
+
+    if (string.IsNullOrWhiteSpace(addRegionRequest.Code))
+    {
+        ModelState.AddModelError(nameof(addRegionRequest.Code), 
+            $"{nameof(addRegionRequest.Code)} cannot be null or empty or white space.");
+    }
+
+    if (string.IsNullOrWhiteSpace(addRegionRequest.Name))
+    {
+        ModelState.AddModelError(nameof(addRegionRequest.Name),
+            $"{nameof(addRegionRequest.Name)} cannot be null or empty or white space.");
+    }
+
+    if (addRegionRequest.Area <= 0)
+    {
+        ModelState.AddModelError(nameof(addRegionRequest.Area),
+            $"{nameof(addRegionRequest.Area)} cannot be less than or equal to zero.");
+    }
+
+    if (addRegionRequest.Lat <= 0)
+    {
+        ModelState.AddModelError(nameof(addRegionRequest.Lat),
+            $"{nameof(addRegionRequest.Lat)} cannot be less than or equal to zero.");
+    }
+
+    if (addRegionRequest.Long <= 0)
+    {
+        ModelState.AddModelError(nameof(addRegionRequest.Long),
+            $"{nameof(addRegionRequest.Long)} cannot be less than or equal to zero.");
+    }
+
+    if (addRegionRequest.Population < 0)
+    {
+        ModelState.AddModelError(nameof(addRegionRequest.Population),
+            $"{nameof(addRegionRequest.Population)} cannot be less than zero.");
+    }
+
+    if (ModelState.ErrorCount > 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+#endregion
+````
+- each property could have one or more validations, entirely up to us how much validation we want. 
+
+
+#### Validating Region Controller - UpdateRegionRequest Model
+
+- 
 
 
 ---
