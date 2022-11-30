@@ -186,7 +186,7 @@ namespace NZWalks.API.Controllers
             if (updateRegionRequest == null)
             {
                 ModelState.AddModelError(nameof(updateRegionRequest),
-                    "Add Region Data is required, cannot be null or empty or white space.");
+                    "Add Region Data is required, cannot be null.");
 
                 return false;
             }

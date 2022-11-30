@@ -745,7 +745,7 @@ public async Task<IActionResult> GetAllAsync()
   - we do this using 400 "bad request" status code. server cannot or will not process the request due to something that is percieved to be a client error. 
   - we need to do this so data base doesn't get junk data, and API doesn't throw random exceptions 
 
-- What endpoints do we need to validate? 
+- What endpoints do we need to validate? i.e. looking at RegionController
   - we aren't passing any data to the `getAllRegionsAsync` data, so don't need to worry about this endpoint
   - `GetRegionAsync` is being passed a Guid. 
     - We are already protecting this using the guid validator we have in the route 
@@ -807,18 +807,6 @@ private bool ValidateAddRegionAsync(Models.DTO.AddRegionRequest addRegionRequest
             $"{nameof(addRegionRequest.Area)} cannot be less than or equal to zero.");
     }
 
-    if (addRegionRequest.Lat <= 0)
-    {
-        ModelState.AddModelError(nameof(addRegionRequest.Lat),
-            $"{nameof(addRegionRequest.Lat)} cannot be less than or equal to zero.");
-    }
-
-    if (addRegionRequest.Long <= 0)
-    {
-        ModelState.AddModelError(nameof(addRegionRequest.Long),
-            $"{nameof(addRegionRequest.Long)} cannot be less than or equal to zero.");
-    }
-
     if (addRegionRequest.Population < 0)
     {
         ModelState.AddModelError(nameof(addRegionRequest.Population),
@@ -840,7 +828,19 @@ private bool ValidateAddRegionAsync(Models.DTO.AddRegionRequest addRegionRequest
 
 #### Validating Region Controller - UpdateRegionRequest Model
 
-- 
+- Basically the exact same as above.
+- he duplicates the method (in case it grows to be different)
+
+#### Validating Walks Controller 
+
+- `GetAllWalksAsync` takes no arguments, no need to validate
+- `GetWalksAsync` only takes a guid, and the decorator takes care of validating this 
+- `AddWalkAsync` takes an addWalkRequest, we will need to validate:
+  - add code here after 
+- `DeleteWalkAsync` takes a guid, decorator validates this anyway
+- `UpdateWalkAsync` takes a updateWalkRequest, we will need to validate:
+  - add code here after:
+
 
 
 ---
