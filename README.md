@@ -61,7 +61,10 @@ sql server 2019 connection string: Server=localhost\MSSQLSERVER01;Database=maste
 6. in program.cs, add the dbContext dependency (so you can inject it)
 7. Run EF Core migration commands
 8. Optional: seed db
-9. Start creating CRUD controllers
+9. Start creating CRUD controllers (see below section)
+10. Add in validations to the controller methods which need it - i.e. those that take a data such as a DTO as an argument
+  - do this manually or use fluent validator 
+11. Authorisation / authentication
 
 #### Flow of adding controllers 
 looks something like this:
