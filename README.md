@@ -38,7 +38,8 @@ Contents
   - [Navigation Properties](#navigation-properties)
 - [Creating WalkDifficulty Controller and CRUD](#creating-walkdifficulty-controller-and-crud)
 - [Validations in .NET Core Web API](#validations-in-aspnet-core-web-api)
-
+  - [Validating Region Controller Manually](#validating-region-controller---addregionrequest-model)
+  - [Fluent Validations](#fluent-validations)
 
 
 
@@ -836,12 +837,75 @@ private bool ValidateAddRegionAsync(Models.DTO.AddRegionRequest addRegionRequest
 - `GetAllWalksAsync` takes no arguments, no need to validate
 - `GetWalksAsync` only takes a guid, and the decorator takes care of validating this 
 - `AddWalkAsync` takes an addWalkRequest, we will need to validate:
-  - add code here after 
+  - add code here after:
+````c#
+// in the top of AddWalkAsync:
+if (!await ValidateAddWalkAsync(addWalkRequest))
+{
+    return BadRequest(ModelState);
+}
+
+private async Task<bool> ValidateAddWalkAsync(Models.DTO.AddWalkRequest addWalkRequest)
+{
+  if (addWalkRequest == null)
+  {
+      ModelState.AddModelError(nameof(addWalkRequest), "Add Walk data cannot be null.");
+
+      return false;
+  }
+
+  if (string.IsNullOrWhiteSpace(addWalkRequest.Name))
+  {
+      ModelState.AddModelError(nameof(addWalkRequest.Name),
+          $"{nameof(addWalkRequest.Name)} cannot be null or empty or white space.");
+  }
+
+  if (addWalkRequest.Length <= 0)
+  {
+      ModelState.AddModelError(nameof(addWalkRequest.Length),
+          $"{nameof(addWalkRequest.Length)} cannot be less than or equal to zero.");
+  }
+
+  // RegionId and WalkDifficultyId both have to be valid guids and have to exist
+  // need to inject region repository and walkdifficulty repository to check these.
+  var region = await regionRepository.GetAsync(addWalkRequest.RegionId);
+  if (region == null)
+  {
+      ModelState.AddModelError(nameof(addWalkRequest.RegionId),
+          $"{nameof(addWalkRequest.RegionId)} is an invalid region id.");
+  }
+
+  var walkDifficulty = await walkDifficultyRepository.GetAsync(addWalkRequest.WalkDifficultyId);
+  if (walkDifficulty == null)
+  {
+      ModelState.AddModelError(nameof(addWalkRequest.WalkDifficultyId),
+          $"{nameof(addWalkRequest.WalkDifficultyId)} is an invalid walk difficulty id.");
+  }
+
+  if (ModelState.ErrorCount > 0)
+  {
+      return false;
+  }
+
+  return true;
+}
+
+// func: 
+
+````
 - `DeleteWalkAsync` takes a guid, decorator validates this anyway
 - `UpdateWalkAsync` takes a updateWalkRequest, we will need to validate:
-  - add code here after:
+  - code is basically the same as AddWalkAsync. 
 
+#### Validating Walk Difficulty Controller 
 
+- `GetAllAsync` doesn't take any arguments, thus needs no validation
+- `GetAsync` only takes a Guid which is validated by the decorator, thus doesn't need validation
+- `AddWalkDifficultyAsync` takes an AddWalkDifficultyRequest, thus DOES require validation **********
+- `UpdateAsync` takes a UpdateWalkDifficultyRequest, thus DOES require validation *******************
+- `DeleteASync` takes a Guid only which is validated by the decorator, thus doesn't need validation
+
+#### Fluent Validations 
 
 ---
 
