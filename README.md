@@ -907,6 +907,54 @@ private async Task<bool> ValidateAddWalkAsync(Models.DTO.AddWalkRequest addWalkR
 
 #### Fluent Validations 
 
+- Another way to validate our requests
+- can use fluent validation instead... www.fluentvalidation.net 
+- replicate our existing validations using fluent validation 
+
+#### Setting up Fluent Validations 
+- right click dependencies => manage nuget packages 
+- install `FluentValidation`, `FluentValidation.AspNetCore`, `FluentValidation.DependencyInjectionExtensions`
+- below AddSwaggerGen(); add:
+````c#
+builder.Services.AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<Program>());
+````
+- from here you just need to create a validators folder in the root, and add them for each DTO argument that the controllers api function takes. i.e.:
+````c#
+using FluentValidation;
+
+namespace NZWalks.API.Validators
+{
+    public class AddRegionRequestValidator : AbstractValidator<Models.DTO.AddRegionRequest>
+    {
+        public AddRegionRequestValidator()
+        {
+            RuleFor(x => x.Code).NotEmpty();
+            RuleFor(x => x.Name).NotEmpty();
+            RuleFor(x => x.Area).GreaterThan(0);
+            RuleFor(x => x.Population).GreaterThanOrEqualTo(0);
+        }
+    }
+}
+````
+
+**Adding Fluent Validations to the AddRegionAsync method in RegionController** 
+- add a new folder "Validators"
+  - create class inside "AddRegionRequestValidator.cs"
+- when our request comes inside AddRegionAsync, it should automatically provoke fluentValidation, trigger it, then decide if it wants to sent a bad request or not. 
+  - in AddRegionRequestValidator.cs:
+    - need to inherit from AbstractValidator, and give it the type (in this case, `Models.DTO.AddRegionRequest`)
+    - replicate our manual validator (code below)
+- comment our manual validate checking function in AddRegionAsync
+- now we have fluent validations on `Models.DTO.AddRegionRequest`, add the `[ApiController]` decorator on our controller, fluent Validations will use the ApiController tag to check if the model state is valid or invalid. 
+  - if it fails, it will sent the ModelState to invalid and the execution of the endpoint will never go inside the AddRegionAsync function. 
+
+**did the same thing for WalkDifficultyController, and WalksController**
+- Note, for checking if regionId / walkDifficultyId exists for the walkController methods ... it is better to use the manual way
+  - fluent validator can do it but it gets very complex talking to the DB etc. 
+  - so a combo of fluent validator + manual ones (just only use the db checking validators in the manual one since fluent can do the rest)
+  - using above method, fluent validation will be triggered first. so if there are errors there, it will 400 just with them before checking db. 
+
+
 ---
 
 add this thing to the backend doc 

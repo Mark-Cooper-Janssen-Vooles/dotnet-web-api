@@ -46,12 +46,11 @@ namespace NZWalks.API.Controllers
         [ActionName("AddRegionAsync")]
         public async Task<IActionResult> AddRegionAsync(Models.DTO.AddRegionRequest addRegionRequest)
         {
-            // validate the request (addRegionRequest)
-            if (!ValidateAddRegionAsync(addRegionRequest))
-            {
-                return BadRequest(ModelState);
-            }
-
+            // validate the request (done in fluid validatios now)
+            //if (!ValidateAddRegionAsync(addRegionRequest))
+            //{
+            //    return BadRequest(ModelState);
+            //}
 
             // Request(DTO) to domain model
             // var region = mapper.Map<Models.Domain.Region>(addRegionRequest);
@@ -103,11 +102,11 @@ namespace NZWalks.API.Controllers
         [Route("{id:guid}")]
         public async Task<IActionResult> UpdateRegionAsync([FromRoute] Guid id, [FromBody] Models.DTO.UpdateRegionRequest updatedRegion)
         {
-            // validate the request 
-            if (!ValidateUpdateRegionAsync(updatedRegion))
-            {
-                return BadRequest(ModelState);
-            }
+            // validate the request (will be done in fluid validations now)
+            //if (!ValidateUpdateRegionAsync(updatedRegion))
+            //{
+            //    return BadRequest(ModelState);
+            //}
 
             // Convert the DTO to domain model
             var region = new Models.Domain.Region()

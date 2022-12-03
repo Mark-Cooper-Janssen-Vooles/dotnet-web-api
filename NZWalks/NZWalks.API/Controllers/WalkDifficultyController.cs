@@ -47,11 +47,11 @@ namespace NZWalks.API.Controllers
         [ActionName("AddWalkDifficultyAsync")]
         public async Task<IActionResult> AddWalkDifficultyAsync([FromBody] Models.DTO.AddWalkDifficultyRequest addWalkDifficultyRequest)
         {
-            // validate data
-            if(!ValidAddWalkDifficultyAsyncData(addWalkDifficultyRequest))
-            {
-                return BadRequest(ModelState);
-            }
+            // validate data now through fluent validator
+            //if(!ValidAddWalkDifficultyAsyncData(addWalkDifficultyRequest))
+            //{
+            //    return BadRequest(ModelState);
+            //}
 
             // convert addWalkDifficultyRequest to domain model
             var walkDifficultyDomainModel = new Models.Domain.WalkDifficulty()
