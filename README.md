@@ -40,6 +40,8 @@ Contents
 - [Validations in .NET Core Web API](#validations-in-aspnet-core-web-api)
   - [Validating Region Controller Manually](#validating-region-controller---addregionrequest-model)
   - [Fluent Validations](#fluent-validations)
+- [Authentication and Authorisation in .NET Core Web API](#authentication-and-authorisation-in-net-core-web-api)
+
 
 
 
@@ -953,6 +955,12 @@ namespace NZWalks.API.Validators
   - fluent validator can do it but it gets very complex talking to the DB etc. 
   - so a combo of fluent validator + manual ones (just only use the db checking validators in the manual one since fluent can do the rest)
   - using above method, fluent validation will be triggered first. so if there are errors there, it will 400 just with them before checking db. 
+
+---
+
+### Authentication and Authorisation in .NET Core Web API
+
+
 
 
 ---
