@@ -47,6 +47,7 @@ Contents
   - [Creating AuthController and Login Method](#creating-authcontroller-and-login-method)
   - [Creating token handler and Generate Token](#creating-token-handler-and-generate-token)
   - [Role Based Authorization](#role-based-authorization)
+  - [Adding Authentication and Authorisation to All API's](#adding-authentication-and-authorisation-to-all-apis)
 
 
 
@@ -1233,13 +1234,25 @@ public async Task<IActionResult> LoginAsync(Models.DTO.LoginRequest loginRequest
 - add `[authorize]` decorator to the `GetAllRegionsAsync` method
 - now use postman, go to https://localhost:7201/regions using a GET request and it should say unauthorised. we need to add the token.
   - get a token using swagger 
-  - in the headers tab in postman, add the key "Authorization" and the value as `bearer <paste token>`
+  - in the headers tab in postman, add the key "Authorization" and the value as `bearer <paste token>` // Important **************************************************************
   - it now works!
 
 #### Role Based Authorization
+- currently with the authorised attribute, both the reader and the writer can access all the endpoints available (as long as theyre valid users)
+- we need to use role-based authorisation 
+- our first static user is readonly, with the 'reader' role only.
+  - the 2nd user is 'readwrite' and has 'reader' and 'writer' roles.
+- our first endpoint GetAllRegionsAsync and GetRegionAsync are just reads, but AddRegion, DeleteRegion, Update region will require writes. 
+- .net provides us for this. we can call `[Authorise(Roles = "reader")]` with the brackets and give it the roles, or `[Authorise(Roles = "writer")]`
+  - if the role has rights it will let it through, if not it will give a 403: forbidden.
+  - 403 means you are authenticated but not authorised to access this resource
+- we can now test this using swagger and postman using a combo of users / apis 
+
+#### Adding Authentication and Authorisation to All API's
+
+
 
 
 ---
 
 add this thing to the backend doc 
-
