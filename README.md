@@ -41,9 +41,9 @@ Contents
   - [Validating Region Controller Manually](#validating-region-controller---addregionrequest-model)
   - [Fluent Validations](#fluent-validations)
 - [Authentication and Authorisation in .NET Core Web API](#authentication-and-authorisation-in-net-core-web-api)
-
-
-
+  - [Setting up Authorisation](#setting-up-authorisation)
+  - [Creating Users and Static User repository](#creating-users-and-static-user-repository)
+  - [Implementing and Testing Authorisation without Token](#implementing-and-testing-authorisation-without-token)
 
 
 
@@ -963,6 +963,73 @@ namespace NZWalks.API.Validators
 
 ### Authentication and Authorisation in .NET Core Web API
 
+- we have build our API and its ready to be consumed, but before we can make it public we need to understand authentication and authorization 
+
+**Authentication** 
+
+- What is authentication?
+  - Authentication is the process of determining a users identity
+  - by using Authentication, we check if we trust the user or client or not
+  - i.e. can this web app talk to our API?
+- Why do we need authentication? 
+  - if we keep our API public, anyone with a browser would be able to get all the resources from our API and modify the data we store in our SQL server.
+  - they could also delete all the data etc. 
+
+**Authorisation**
+
+- What is authorization? 
+  - authorization is the process of determing whether a user has access to a resource
+  - by using authorisation, we check if the user has read permissions or write permissions or other kind of roles
+  - i.e. does this authenticated user get to delete others data, or only their own? 
+- Why do we need authorization?
+  - if we trust our react app front end, and in our react app we have two users: normal user (read access) and admin user (read and write access)
+  - API will check the roles of the users, to see if they're allowed to only read or read and write 
+
+#### Authentication Flow (JWT) - Json Web Token 
+
+- JWT is an open standard that defines a compact and self-contained way for securely transmitting information between parties as a JSON object. This info can be verified and trusted because it is digitally signed, either using the HMAC algorithm or a public/private key pair using RSA or ECDSA. 
+- users => come to website => login => website sends login info to API => api checks user / pass, if correct sends JWT token to website => website then uses JWT token to make calls to API => API checks if token is correct => API returns data to website 
+
+
+#### Setting up Authentication
+
+- add nuget packages: `Microsoft.AspNetCore.Authentication.JwtBearer`, `Microsoft.IdentityModel.Tokens`, `System.IdentityModel.Tokens.Jwt`
+- go to appsettings.json
+  - below "connectionStrings", section add another "Jwt".
+  - Add a key, which is to be kept secret. He just says "i will add a random string of letters which will be my secret"
+    - if someone else has this key, they will be able to make JWT tokens for themselves and use the API => aka can't commit this. Can be per environment as well. 
+  - Add an issuer and audience. Because this API is issuing this jwt token but also the audience for it, it will be the same for both. This value is the https location its hosted at.
+  - Note: Will need to make all this JWT stuff in appsettings based on environment for it to work in non-dev environment 
+- go to Program.cs, just before `var app = builder.Build();`, add the following: 
+````c#
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => 
+    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    {
+        ValidateIssuer = true, // validate app issuing this token
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"], // this is the same as whats in appsettings.json
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+    });
+````
+- just before `app.UseAuthorization();` add: `app.UseAuthentication();` so we make sure we check our app is authenticated before we check for authorization. thats the flow of the middleware  
+
+
+#### Implementing and Testing Authorisation without Token
+
+- to use authentication we need to put the decorator on our API controllers, under `[Route("someroute")]` add `[Authorize]`.
+  - This is telling the client trying to access this controller that you need a valid token to access any of the resources in it.  
+  - if we start the app and try to access any of the methods on that controller, we now get a 401 (unauthorized)
+  - we check authorisation before we check validators etc 
+
+NOTE:
+- if you want to onlyu have some endpoints require authorisation, then you can remove the authorize decorator from the controller class and instead put it on the individual endpoints (or functions) within the controller. 
+
+#### Creating Users and Static User repository
 
 
 
