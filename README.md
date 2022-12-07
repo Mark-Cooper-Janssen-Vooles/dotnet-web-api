@@ -1429,7 +1429,3 @@ Thoughts:
 - I would need an endpoint to create users in the auth controller
 - I would give everyone read / write, so no roles required. However they will need to be only able to access their own resources, i.e. based on their UserId 
 - Need to thoroughly plan the DB schemas. what tables do i need etc. 
-
----
-
-add this thing to the backend doc 
