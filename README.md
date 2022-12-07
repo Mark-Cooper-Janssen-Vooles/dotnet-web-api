@@ -47,7 +47,8 @@ Contents
   - [Creating AuthController and Login Method](#creating-authcontroller-and-login-method)
   - [Creating token handler and Generate Token](#creating-token-handler-and-generate-token)
   - [Role Based Authorization](#role-based-authorization)
-  - [Adding Authentication and Authorisation to All API's](#adding-authentication-and-authorisation-to-all-apis)
+  - [Changing Swagger to add Authentication](#changing-swagger-to-add-authentication)
+  - [Add EF Core and Add Users To Database](#add-ef-core-and-add-users-to-database)
 
 
 
@@ -1243,15 +1244,191 @@ public async Task<IActionResult> LoginAsync(Models.DTO.LoginRequest loginRequest
 - our first static user is readonly, with the 'reader' role only.
   - the 2nd user is 'readwrite' and has 'reader' and 'writer' roles.
 - our first endpoint GetAllRegionsAsync and GetRegionAsync are just reads, but AddRegion, DeleteRegion, Update region will require writes. 
-- .net provides us for this. we can call `[Authorise(Roles = "reader")]` with the brackets and give it the roles, or `[Authorise(Roles = "writer")]`
+- .net provides us for this. we can call `[Authorize(Roles = "reader")]` with the brackets and give it the roles, or `[Authorize(Roles = "writer")]`
   - if the role has rights it will let it through, if not it will give a 403: forbidden.
   - 403 means you are authenticated but not authorised to access this resource
 - we can now test this using swagger and postman using a combo of users / apis 
 
 #### Adding Authentication and Authorisation to All API's
+- all the other controllers should follow the same format. GET requests are 'reader' and PUT / POST / DELETE requests are 'writer'. 
+- keep the AuthController login endpoint as not requiring an authorize decorator, because everyone needs to be able to access that. 
+
+#### Changing Swagger to add Authentication 
+- in program.cs find `builder.Services.AddSwaggerGen();`, we can now add options as an argument 
+- change it to this:
+````c#
+builder.Services.AddSwaggerGen(options =>
+{
+    var securityScheme = new OpenApiSecurityScheme()
+    {
+        Name = "JWT Authentication",
+        Description = "Enter a valid JWT bearer token",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Reference = new OpenApiReference()
+        {
+            Id = JwtBearerDefaults.AuthenticationScheme,
+            Type = ReferenceType.SecurityScheme
+        }
+    };
+
+    options.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement()
+    {
+        {securityScheme, new string[] {} }
+    });
+});
+````
+- now when you start the project and go to swagger, notice the "Authorize" button on the top right. Use the login endpoint to get a bearer, and then click the authorze button to put the token in. 
+- the token should now give you the authorisation and authentication for whatever login roles you have associated with the user/pass you used. 
+
+#### Add EF Core and Add Users To Database 
+
+- lets replace `StaticUserRepository.cs` with an actual database user model
+- we have a domain model User.cs but we will need to change some things
+- create a Role.cs domain model first
+````c#
+public class Role
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+
+    // navigation Property 
+    public List<User_Role> UserRoles { get; set; }
+}
+````
+- create a domain model User_Role.cs as well, this will store info on how the users have roles and how many roles are to one user
+````c#
+public class User_Role
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; } //maps to userId automatically 
+    public User User { get; set; } // navigation property 
+    public Guid RoleId { get; set; }
+    public Role Role { get; set; } // navigation property
+}
+````
+- update User.cs: 
+````c#
+public class User
+{
+    public Guid Id { get; set; }
+    public string Username { get; set; }
+    public string Email { get; set; }
+    public string Password { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+
+    // navigation property
+    public List<User_Role> UserRoles { get; set; }
+}
+````
 
 
+- in NZWalksDbContext.cs:
+  - tbh didn't really get what he was doing here. need to research this more
+  - added OnModelCreating override, add DbSet's for user / role / user_role.
+````c#
+public class NZWalksDbContext : DbContext 
+{
+    public NZWalksDbContext(DbContextOptions<NZWalksDbContext> options): base(options) { }
 
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<User_Role>()
+            .HasOne(x => x.Role)
+            .WithMany(y => y.UserRoles)
+            .HasForeignKey(x => x.RoleId);
+
+        modelBuilder.Entity<User_Role>()
+            .HasOne(x => x.User)
+            .WithMany(y => y.UserRoles)
+            .HasForeignKey(x => x.UserId);
+    }
+
+    public DbSet<Region> Regions { get; set; } 
+    public DbSet<Walk> Walks { get; set; }
+    public DbSet<WalkDifficulty> WalkDifficulty { get; set; }
+
+    public DbSet<User> Users { get; set; }
+    public DbSet<Role> Roles { get; set; }
+    public DbSet<User_Role> User_Roles { get; set; }
+}
+````
+- tools => nugetpackage manager => open console 
+- `add-migration "adding users"`
+- build failed because we changed the roles in user.cs , just comment out whatever fails
+- this time it generated the script for us. now we need to run `update-database`
+- open sql and we've got users, user_roles, roles 
+  - he now uses a SQL query to seed some data. Better idea for me is to create the endpoints?! 
+  - might be better to seed some stuff, i.e. the roles ... only need to be seeded, users wont create these. 
+  - run script first, then build out sign-up functionality after. 
+
+- we won't be using static users anymore, so make a new repositry 'UserRepository.cs'
+- back in user.cs he adds back in `public List<string> Roles { get; set; }`
+  - uncomment the user.Roles throughout the code (in the tokenHandler.cs)
+````c#
+public class UserRepository : IUserRepository
+{
+    private readonly NZWalksDbContext dbContext;
+
+    public UserRepository(NZWalksDbContext dbContext)
+    {
+        this.dbContext = dbContext;
+    }
+    public async Task<User> AuthenticateUserAsync(string username, string password)
+    {
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == username.ToLower() &&
+        x.Password == password);
+
+        if (user == null)
+        {
+            return null;
+        }
+
+        var userRoles = await dbContext.User_Roles.Where(x => x.UserId == user.Id).ToListAsync();
+
+        if (userRoles.Any())
+        {
+            user.Roles = new List<string>();
+            foreach (var userRole in userRoles)
+            {
+                var role = await dbContext.Roles.FirstOrDefaultAsync(x => x.Id == userRole.RoleId);
+                if (role != null)
+                {
+                    user.Roles.Add(role.Name);
+                }
+            }
+        }
+
+        user.Password = null; // set the password to null as we don't want this floating around! 
+        return user;
+    }
+}
+````
+
+- in program.cs change the singleton StaticUserRepository to: `builder.Services.AddScoped<IUserRepository, UserRepository>();`
+  - this is how dependency injection allows us to change dependencies very quickly
+- when we start the app to test swagger and try to login, we have an issue with the primary key. 
+  - We have just added the Roles property to the domain model User.cs
+  - need to add this to the User.cs class:
+````c#
+[NotMapped] // this attribute
+public List<string> Roles { get; set; }
+````
+- now we can use swagger and get the jwt and it works! 
+
+
+---
+
+End of the course. 
+
+Thoughts: 
+- I would need an endpoint to create users in the auth controller
+- I would give everyone read / write, so no roles required. However they will need to be only able to access their own resources, i.e. based on their UserId 
+- Need to thoroughly plan the DB schemas. what tables do i need etc. 
 
 ---
 

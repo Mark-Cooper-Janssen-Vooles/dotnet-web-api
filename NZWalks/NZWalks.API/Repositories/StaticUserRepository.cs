@@ -12,7 +12,7 @@ namespace NZWalks.API.Repositories
                 Username= "Readonly",
                 Email="Readonly@test.com",
                 Password="password",
-                Roles= new List<string> { "reader" },
+                // Roles= new List<string> { "reader" },
                 FirstName= "Readonly",
                 LastName= "Readonly"
             },
@@ -22,7 +22,7 @@ namespace NZWalks.API.Repositories
                 Username= "Admin",
                 Email="Admin@test.com",
                 Password="password",
-                Roles= new List<string> { "reader", "writer" },
+                // Roles= new List<string> { "reader", "writer" },
                 FirstName= "Admin",
                 LastName= "Admin"
             },
