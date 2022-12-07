@@ -44,6 +44,9 @@ Contents
   - [Setting up Authorisation](#setting-up-authorisation)
   - [Creating Users and Static User repository](#creating-users-and-static-user-repository)
   - [Implementing and Testing Authorisation without Token](#implementing-and-testing-authorisation-without-token)
+  - [Creating AuthController and Login Method](#creating-authcontroller-and-login-method)
+  - [Creating token handler and Generate Token](#creating-token-handler-and-generate-token)
+  - [Role Based Authorization](#role-based-authorization)
 
 
 
@@ -1028,9 +1031,212 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 NOTE:
 - if you want to onlyu have some endpoints require authorisation, then you can remove the authorize decorator from the controller class and instead put it on the individual endpoints (or functions) within the controller. 
+- he's changed it so only the bottom 3 methods "AddRegionAsync", "DeleteRegionAsync" and "UpdateRegionAsync" require authorisation. 
 
 #### Creating Users and Static User repository
 
+- to generate a token, we need users who have valid login id's and valid passwords. 
+- start creating user domain model first (models => domain => user.cs)
+- create 'User.cs' class:
+````c#
+public class User
+{
+    public Guid Id { get; set; }
+    public string Username { get; set; }
+    public string Email { get; set; }
+    public string Password { get; set; }
+    public List<string> Roles { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+}
+````
+- "for demonstration purposes we will not connect this to a database"
+  - "but to show you a working example i will create a static list of 2 users to see how authentication works"
+- in repositories creates IUserRepository interface 
+````c#
+public interface IUserRepository
+{
+    Task<bool> AuthenticateUserAsync(string username, string password);
+}
+````
+- creates a new repository 'StaticUserRepository.cs' class
+  - note this can be used for testing etc later. we can swap this out for a real DB later on.
+````c#
+    public class StaticUserRepository : IUserRepository
+    {
+        private List<User> Users = new List<User>()
+        {
+            new User()
+            {
+                Id = Guid.NewGuid(),
+                Username= "Readonly",
+                Email="Readonly@test.com",
+                Password="password",
+                Roles= new List<string> { "reader" },
+                FirstName= "Readonly",
+                LastName= "Readonly"
+            },
+            new User()
+            {
+                Id = Guid.NewGuid(),
+                Username= "Admin",
+                Email="Admin@test.com",
+                Password="password",
+                Roles= new List<string> { "reader", "writer" },
+                FirstName= "Admin",
+                LastName= "Admin"
+            },
+        };
+
+        public async Task<bool> AuthenticateUserAsync(string username, string password)
+        {
+            var user = Users.Find(x => x.Username.Equals(username, StringComparison.InvariantCultureIgnoreCase) &&
+            x.Password == password);
+
+            if (user !=null)
+            {
+                return true;
+            }
+
+            return false;
+        }
+    }
+````
+- time to inject this StaticUserRepository in Program.cs
+  - because we're using a static user repository instance, we need to use "AddSingleton". it cannot be scoped, because we can only generate it once (due to the fact we're creating new guids)
+  - `builder.Services.AddSingleton<IUserRepository, StaticUserRepository>();`
+
+
+#### Creating AuthController and Login Method
+
+- we will now have another controller API where we will ask users to log in. i.e. they send user name and password to an API 
+- creates new controller `AuthController.cs`
+- create the loginAsync method, which takes a LoginRequest (create a model/DTO for this):
+````c#
+public class LoginRequest
+{
+    public string Username { get; set; }
+    public string Password { get; set; }}
+}
+````
+- the controller: 
+````c#
+[ApiController]
+[Route("Auth")]
+public class AuthController : Controller
+{
+    private readonly IUserRepository userRepository;
+
+    public AuthController(IUserRepository userRepository)
+    {
+        this.userRepository = userRepository;
+    }
+
+    [HttpPost]
+    [Route("login")]
+    public async Task<IActionResult> LoginAsync(Models.DTO.LoginRequest loginRequest)
+    {
+        // validate the incoming request (done using fluent validator)
+
+        // check if user is authenticated 
+        var isAuthenticated = await userRepository.AuthenticateUserAsync(loginRequest.Username, 
+            loginRequest.Password);
+
+        if (isAuthenticated)
+        {
+            // generate a JWT token and send it back 
+        }
+
+        return BadRequest("Username or password is incorrect.");
+
+    }
+}
+````
+
+#### Creating token handler and Generate Token 
+
+- we want our controllers to be lean and minimalistic, so we will create a token handler repository 
+- create a new interface `ITokenHandler.cs` in the repositories folder
+````c#
+public interface ITokenHandler
+{
+    Task<string> CreateTokenAsync(User user); // returns a task of string, i.e. the JWT token.
+}
+````
+- create a new class `TokenHandler.cs` in the repositories folder
+- we need to get the Key from app settings (the symmetric key) => this is what should be stored securely somehow.
+- he did a lot here, not much to understand really in terms of theory. i think this is just "how its done" to generate a JWT token. 
+````c#
+public class TokenHandler : ITokenHandler
+{
+    private readonly IConfiguration config;
+
+    public TokenHandler(IConfiguration config)
+    {
+        this.config = config;
+    }
+
+    public Task<string> CreateTokenAsync(User user)
+    {
+        // create claims 
+        var claims = new List<Claim>();
+        claims.Add(new Claim(ClaimTypes.GivenName, user.FirstName));
+        claims.Add(new Claim(ClaimTypes.Surname, user.LastName));
+        claims.Add(new Claim(ClaimTypes.Email, user.Email));
+
+        // loop into roles of users
+        user.Roles.ForEach((role) =>
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        });
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            config["Jwt:Issuer"],
+            config["Jwt:Audience"],
+            claims,
+            expires: DateTime.Now.AddMinutes(15), // 15 minutes till expiry
+            signingCredentials: credentials);
+
+        return Task.FromResult(new JwtSecurityTokenHandler().WriteToken(token));
+    }
+}
+````
+- need to add the dependency injection for ITokenHandler in Program.cs `builder.Services.AddScoped<ITokenHandler, NZWalks.API.Repositories.TokenHandler>();`
+- now inject the dependency into the AuthController, and use it. We have changed the userRepository slightly so now it returns the user from AuthenticateUSerAsync:
+````c#
+[HttpPost]
+[Route("login")]
+public async Task<IActionResult> LoginAsync(Models.DTO.LoginRequest loginRequest)
+{
+    // validate the incoming request (done using fluent validator)
+
+    // check if user is authenticated 
+    var user = await userRepository.AuthenticateUserAsync(loginRequest.Username, 
+        loginRequest.Password);
+
+    if (user != null )
+    {
+        // generate a JWT token and send it back 
+        var token = tokenHandler.CreateTokenAsync(user);
+        return Ok(token);
+    }
+
+    return BadRequest("Username or password is incorrect.");
+
+}
+````
+- can test it now in Swagger. 
+- it should return a token, which you can paste into jwt.io website. you can see here the token has a payload, including name / surname / email / roles etc. 
+- add `[authorize]` decorator to the `GetAllRegionsAsync` method
+- now use postman, go to https://localhost:7201/regions using a GET request and it should say unauthorised. we need to add the token.
+  - get a token using swagger 
+  - in the headers tab in postman, add the key "Authorization" and the value as `bearer <paste token>`
+  - it now works!
+
+#### Role Based Authorization
 
 
 ---
