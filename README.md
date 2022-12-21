@@ -70,6 +70,7 @@ sql server 2019 connection string: Server=localhost\MSSQLSERVER01;Database=maste
 10. Add in validations to the controller methods which need it - i.e. those that take a data such as a DTO as an argument
   - do this manually or use fluent validator 
 11. Authorisation / authentication
+12. for any changes to the db, need to change the domain models, then `Add-Migration` in package manager console, then `Update-Database` to use entityframework core to fix it up and apply. 
 
 #### Flow of adding controllers 
 looks something like this:
